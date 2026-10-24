@@ -21,6 +21,7 @@ import {
   Plus,
   CheckCircle2,
   Calendar,
+  Download,
   RotateCcw,
   Check,
   Copy,
@@ -95,6 +96,7 @@ export default function AppFlow({ state }) {
   // Confirm Modal state for Step 5
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
+<<<<<<< HEAD
  
   // If user arrives at /app after a previous plan was already completed, reset to Step 1
   useEffect(() => {
@@ -102,6 +104,39 @@ export default function AppFlow({ state }) {
       resetWorkflow();
     }
   }, []);
+=======
+
+  const handleExportPlan = (planDays) => {
+    const markdown = [
+      '# My Career Plan',
+      '',
+      ...planDays.flatMap((day, index) => {
+        const dayNumber = day.day ?? index + 1;
+        const hasTaskList = Array.isArray(day.tasks);
+        const heading = hasTaskList && day.title
+          ? `## Day ${dayNumber}: ${day.title}`
+          : `## Day ${dayNumber}`;
+        const tasks = hasTaskList ? day.tasks : (day.title ? [day.title] : []);
+        const taskLines = tasks
+          .map((task) => typeof task === 'string' ? task : task.title)
+          .filter(Boolean)
+          .map((task) => `- ${task}`);
+
+        return [heading, ...taskLines, ''];
+      })
+    ].join('\n');
+    const file = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
+    const downloadUrl = URL.createObjectURL(file);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = 'My_Career_Plan.md';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
+  };
+
+>>>>>>> 7f821a0578502cf5279ffd79ec51afca8af85f7e
   // File upload reader
   const handleFileProcess = (file) => {
     if (!file) return;
@@ -792,6 +827,7 @@ export default function AppFlow({ state }) {
             {/* Day 1 to Day 7 Timeline (Catalog Resources removed) */}
             <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 font-medium">
+<<<<<<< HEAD
                 <span className="font-bold text-slate-800 dark:text-slate-100 text-sm">
                   Timeline (Day 1 - Day 7)
                 </span>
@@ -800,6 +836,22 @@ export default function AppFlow({ state }) {
                   {activePlan.tasks.reduce((sum, t) => sum + t.minutes, 0)}{" "}
                   minutes
                 </span>
+=======
+                <span className="font-bold text-slate-800 dark:text-slate-100 text-sm">Timeline (Day 1 - Day 7)</span>
+                <div className="flex items-center gap-4">
+                  <span className="font-mono tabular-nums text-indigo-700 dark:text-indigo-400 font-semibold">
+                    Total: {activePlan.tasks.reduce((sum, t) => sum + t.minutes, 0)} minutes
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleExportPlan(activePlan.tasks)}
+                    className="inline-flex items-center gap-1.5 text-indigo-700 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 font-semibold"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    Export plan
+                  </button>
+                </div>
+>>>>>>> 7f821a0578502cf5279ffd79ec51afca8af85f7e
               </div>
 
               <div className="divide-y divide-slate-100 dark:divide-slate-800/80">

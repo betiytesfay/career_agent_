@@ -1,3 +1,16 @@
+<<<<<<< HEAD
+const { Pool } = require('pg');
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
+
+module.exports = {
+  query: (text, params) => pool.query(text, params),
+  pool
+};
+=======
 require('dotenv').config();
 const { Pool } = require('pg');
 
@@ -18,3 +31,4 @@ db.on('error', (err) => {
 });
 
 module.exports = db;
+>>>>>>> 8d7d07aab1eac54ac1759b0705e0cf97a820ca1a

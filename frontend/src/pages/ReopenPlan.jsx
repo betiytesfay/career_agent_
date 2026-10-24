@@ -173,7 +173,7 @@ export default function ReopenPlan({ savedPlans, toggleTaskDone }) {
                   className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center gap-1.5 transition-colors"
                 >
                   <Printer className="w-3.5 h-3.5" />
-                  <span>Print</span>
+                  <span>Export</span>
                 </button>
 
                 <button
