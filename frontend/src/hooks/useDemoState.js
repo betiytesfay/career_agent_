@@ -22,6 +22,29 @@ const STORAGE_KEY_SKILLS = 'careerpath_user_skills_v2';
 
 export function useDemoState() {
   const [step, setStep] = useState(1);
+  const [unlockedStep, setUnlockedStep] = useState(1);
+  
+  // Reset the workflow to Step 1 for analyzing a new CV
+  const resetWorkflow = () => {
+    setStep(1);
+    setUnlockedStep(1);
+    setCvText("");
+    setUploadedFile(null);
+  };
+
+  // Unlocks future steps only when the user finishes the current step's action
+  const advanceToStep = (nextStep) => {
+    setUnlockedStep((prev) => Math.max(prev, nextStep));
+    setStep(nextStep);
+  };
+
+  // Guarded navigation for header tabs (only allows visited/unlocked steps)
+  const goToStep = (targetStep) => {
+    if (targetStep <= unlockedStep) {
+      setStep(targetStep);
+    }
+  };
+
   const [cvText, setCvText] = useState("");
   const [uploadedFile, setUploadedFile] = useState(null);
   const [isExtracting, setIsExtracting] = useState(false);
@@ -371,6 +394,10 @@ export function useDemoState() {
   return {
     step,
     setStep,
+    unlockedStep,
+    advanceToStep,
+    goToStep,
+    resetWorkflow,
     cvText,
     setCvText,
     uploadedFile,

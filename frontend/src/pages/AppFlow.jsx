@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import StepProgress from '../components/StepProgress.jsx';
 import SkillCard from '../components/SkillCard.jsx';
@@ -29,14 +29,19 @@ import {
   X,
   UploadCloud,
   FileText,
-  Trash2
-} from 'lucide-react';
+  Trash2,
+  Home, // <-- Add Home icon
+} from "lucide-react";
 
 export default function AppFlow({ state }) {
   const navigate = useNavigate();
   const {
     step,
     setStep,
+    unlockedStep,
+    advanceToStep,
+    goToStep,
+    resetWorkflow,
     cvText,
     setCvText,
     uploadedFile,
@@ -74,23 +79,29 @@ export default function AppFlow({ state }) {
     setChatOpen,
     aiTyping,
     chatMessages,
-    sendChatMessage
+    sendChatMessage,
   } = state;
 
   // Mode: 'upload' or 'paste'
-  const [cvInputMode, setCvInputMode] = useState('upload');
+  const [cvInputMode, setCvInputMode] = useState("upload");
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef(null);
 
   // Add Skill Form state
   const [showAddForm, setShowAddForm] = useState(false);
   const [newSkillName, setNewSkillName] = useState(ALLOWED_SKILLS[0]);
-  const [newSkillLevel, setNewSkillLevel] = useState('working');
+  const [newSkillLevel, setNewSkillLevel] = useState("working");
 
   // Confirm Modal state for Step 5
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
-
+ 
+  // If user arrives at /app after a previous plan was already completed, reset to Step 1
+  useEffect(() => {
+    if (step === 5) {
+      resetWorkflow();
+    }
+  }, []);
   // File upload reader
   const handleFileProcess = (file) => {
     if (!file) return;
@@ -101,9 +112,9 @@ export default function AppFlow({ state }) {
       if (setUploadedFile) {
         setUploadedFile({
           name: file.name,
-          size: (file.size / 1024).toFixed(1) + ' KB',
-          type: file.type || 'Document',
-          base64: e.target?.result
+          size: (file.size / 1024).toFixed(1) + " KB",
+          type: file.type || "Document",
+          base64: e.target?.result,
         });
       }
     };
@@ -111,27 +122,32 @@ export default function AppFlow({ state }) {
 
     // Read as text
     const textReader = new FileReader();
-    if (file.name.endsWith('.txt') || file.type.includes('text')) {
+    if (file.name.endsWith(".txt") || file.type.includes("text")) {
       textReader.onload = (e) => {
-        setCvText(e.target?.result || '');
+        setCvText(e.target?.result || "");
       };
       textReader.readAsText(file);
     } else {
       textReader.onload = (e) => {
         const raw = e.target?.result;
-        if (typeof raw === 'string') {
+        if (typeof raw === "string") {
           setCvText(raw);
         } else if (raw) {
           const bytes = new Uint8Array(raw);
-          let str = '';
+          let str = "";
           for (let i = 0; i < bytes.length; i++) {
             const b = bytes[i];
             if ((b >= 32 && b <= 126) || b === 10 || b === 13) {
               str += String.fromCharCode(b);
             }
           }
-          const cleaned = str.replace(/[^\x20-\x7E\n]/g, ' ').replace(/\s{2,}/g, ' ').trim();
-          setCvText(cleaned.length > 20 ? cleaned : `Resume document: ${file.name}`);
+          const cleaned = str
+            .replace(/[^\x20-\x7E\n]/g, " ")
+            .replace(/\s{2,}/g, " ")
+            .trim();
+          setCvText(
+            cleaned.length > 20 ? cleaned : `Resume document: ${file.name}`,
+          );
         }
       };
       textReader.readAsArrayBuffer(file);
@@ -165,14 +181,18 @@ export default function AppFlow({ state }) {
       }
     } finally {
       setIsExtracting(false);
-      setStep(2);
+      advanceToStep(2);
     }
   };
 
   // Add skill submit
   const handleAddSkillSubmit = (e) => {
     e.preventDefault();
-    addSkill(newSkillName, newSkillLevel, `Verified from student input for ${newSkillName}.`);
+    addSkill(
+      newSkillName,
+      newSkillLevel,
+      `Verified from student input for ${newSkillName}.`,
+    );
     setShowAddForm(false);
   };
 
@@ -182,11 +202,14 @@ export default function AppFlow({ state }) {
       const term = searchTerm.toLowerCase();
       const matchTitle = opp.title.toLowerCase().includes(term);
       const matchOrg = opp.organization.toLowerCase().includes(term);
-      const matchSkills = [...opp.required, ...opp.preferred].some(s => s.toLowerCase().includes(term));
+      const matchSkills = [...opp.required, ...opp.preferred].some((s) =>
+        s.toLowerCase().includes(term),
+      );
       if (!matchTitle && !matchOrg && !matchSkills) return false;
     }
     if (filterMin60 && opp.score < 60) return false;
-    if (filterHideMissingReq && opp.missing.some(m => m.isRequired)) return false;
+    if (filterHideMissingReq && opp.missing.some((m) => m.isRequired))
+      return false;
     return true;
   });
 
@@ -195,13 +218,20 @@ export default function AppFlow({ state }) {
       {/* Top Bar with Logo and My Plans */}
       <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#090d16]/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-          <Link to="/" className="flex items-center gap-2.5 whitespace-nowrap shrink-0 group">
+          <Link
+            to="/"
+            className="flex items-center gap-2.5 whitespace-nowrap shrink-0 group"
+          >
             <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-xs group-hover:bg-indigo-700 transition-colors">
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
-              <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100 leading-none block">CareerPath</span>
-              <span className="text-[10px] font-semibold uppercase text-indigo-600 dark:text-indigo-400 tracking-wider">Guidance Only</span>
+              <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100 leading-none block">
+                CareerPath
+              </span>
+              <span className="text-[10px] font-semibold uppercase text-indigo-600 dark:text-indigo-400 tracking-wider">
+                Guidance Only
+              </span>
             </div>
           </Link>
 
@@ -229,17 +259,19 @@ export default function AppFlow({ state }) {
           </div>
         </div>
       </header>
-
-      {/* 5-Step Progress Bar - Placed Below Header */}
+      {/* 5-Step Progress Bar */}
       <div className="sticky top-16 z-30 bg-white/95 dark:bg-[#090d16]/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors py-2 px-4 sm:px-6 shadow-2xs">
         <div className="max-w-3xl mx-auto">
-          <StepProgress currentStep={step} onSelectStep={(s) => setStep(s)} />
+          <StepProgress
+            currentStep={step}
+            unlockedStep={unlockedStep}
+            onSelectStep={goToStep}
+          />
         </div>
       </div>
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
-
         {/* ==================================================== */}
         {/* STEP 1: UPLOAD OR PASTE CV                           */}
         {/* ==================================================== */}
@@ -247,20 +279,23 @@ export default function AppFlow({ state }) {
           <div className="max-w-2xl mx-auto space-y-6 pt-2 animate-fade-in">
             <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
               <div className="space-y-1.5">
-                <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider">Step 1 of 5</span>
-                <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Upload or paste your CV</h2>
-              
+                <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider">
+                  Step 1 of 5
+                </span>
+                <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
+                  Upload or paste your CV
+                </h2>
               </div>
 
               {/* Segmented Mode Selector: Upload File vs Paste Text */}
               <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
                 <button
                   type="button"
-                  onClick={() => setCvInputMode('upload')}
+                  onClick={() => setCvInputMode("upload")}
                   className={`flex-1 py-2 px-3 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-2 ${
-                    cvInputMode === 'upload'
-                      ? 'bg-white text-slate-900 shadow-xs font-bold'
-                      : 'text-slate-500 hover:text-slate-900'
+                    cvInputMode === "upload"
+                      ? "bg-white text-slate-900 shadow-xs font-bold"
+                      : "text-slate-500 hover:text-slate-900"
                   }`}
                 >
                   <UploadCloud className="w-4 h-4 text-indigo-600" />
@@ -268,11 +303,11 @@ export default function AppFlow({ state }) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setCvInputMode('paste')}
+                  onClick={() => setCvInputMode("paste")}
                   className={`flex-1 py-2 px-3 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-2 ${
-                    cvInputMode === 'paste'
-                      ? 'bg-white text-slate-900 shadow-xs font-bold'
-                      : 'text-slate-500 hover:text-slate-900'
+                    cvInputMode === "paste"
+                      ? "bg-white text-slate-900 shadow-xs font-bold"
+                      : "text-slate-500 hover:text-slate-900"
                   }`}
                 >
                   <FileText className="w-4 h-4 text-indigo-600" />
@@ -281,12 +316,14 @@ export default function AppFlow({ state }) {
               </div>
 
               {/* Option 1: Drag & Drop File Upload */}
-              {cvInputMode === 'upload' && (
+              {cvInputMode === "upload" && (
                 <div className="space-y-4">
                   <input
                     type="file"
                     ref={fileInputRef}
-                    onChange={(e) => e.target.files && handleFileProcess(e.target.files[0])}
+                    onChange={(e) =>
+                      e.target.files && handleFileProcess(e.target.files[0])
+                    }
                     accept=".pdf,.doc,.docx,.txt,.rtf,text/plain"
                     className="hidden"
                   />
@@ -305,7 +342,8 @@ export default function AppFlow({ state }) {
                             <span>{uploadedFile.size}</span>
                             <span>•</span>
                             <span className="text-emerald-700 font-semibold flex items-center gap-1">
-                              <CheckCircle2 className="w-3 h-3 text-emerald-600" /> File loaded & ready
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />{" "}
+                              File loaded & ready
                             </span>
                           </div>
                         </div>
@@ -314,7 +352,9 @@ export default function AppFlow({ state }) {
                       <div className="flex items-center gap-2 shrink-0">
                         <button
                           type="button"
-                          onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                          onClick={() =>
+                            fileInputRef.current && fileInputRef.current.click()
+                          }
                           className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold transition-colors"
                         >
                           Change
@@ -323,7 +363,7 @@ export default function AppFlow({ state }) {
                           type="button"
                           onClick={() => {
                             if (setUploadedFile) setUploadedFile(null);
-                            setCvText('');
+                            setCvText("");
                           }}
                           className="p-1.5 text-slate-400 hover:text-red-600 transition-colors"
                           title="Remove file"
@@ -337,11 +377,13 @@ export default function AppFlow({ state }) {
                       onDrop={handleDrop}
                       onDragOver={handleDragOver}
                       onDragLeave={handleDragLeave}
-                      onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                      onClick={() =>
+                        fileInputRef.current && fileInputRef.current.click()
+                      }
                       className={`cursor-pointer border-2 border-dashed rounded-2xl p-8 sm:p-12 text-center transition-all flex flex-col items-center justify-center gap-3 ${
                         isDragOver
-                          ? 'border-indigo-600 bg-indigo-50/70 scale-[1.01]'
-                          : 'border-slate-300 bg-slate-50/60 hover:border-indigo-400 hover:bg-slate-50'
+                          ? "border-indigo-600 bg-indigo-50/70 scale-[1.01]"
+                          : "border-slate-300 bg-slate-50/60 hover:border-indigo-400 hover:bg-slate-50"
                       }`}
                     >
                       <div className="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center shadow-2xs">
@@ -361,26 +403,34 @@ export default function AppFlow({ state }) {
                     </div>
                   )}
 
-                  <div className="text-center">
+                  <div className="text-center space-y-2">
                     <button
                       type="button"
-                      onClick={() => setCvInputMode('paste')}
-                      className="text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
+                      onClick={() => setCvInputMode("paste")}
+                      className="text-xs text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium transition-colors cursor-pointer"
                     >
                       Prefer to copy-paste your CV text? Switch to paste mode
                     </button>
+
+                    <div>
+                      <p className="text-xs font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800/80 rounded-lg py-2 px-3.5 inline-block shadow-2xs">
+                        Note: Since the AI Agent is still in development pasting a
+                        CV text may work better than uploading a CV.
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}
 
               {/* Option 2: Direct Textarea Paste */}
-              {cvInputMode === 'paste' && (
+              {cvInputMode === "paste" && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
                     <span>Paste Resume Text</span>
                     {cvText.trim() && (
                       <span className="text-[11px] text-slate-400">
-                        {cvText.trim().split(/\s+/).filter(Boolean).length} words • {cvText.length} characters
+                        {cvText.trim().split(/\s+/).filter(Boolean).length}{" "}
+                        words • {cvText.length} characters
                       </span>
                     )}
                   </div>
@@ -397,7 +447,7 @@ export default function AppFlow({ state }) {
                     <div className="flex justify-end">
                       <button
                         type="button"
-                        onClick={() => setCvText('')}
+                        onClick={() => setCvText("")}
                         className="text-xs text-slate-400 hover:text-red-600 font-medium transition-colors"
                       >
                         Clear text
@@ -411,8 +461,8 @@ export default function AppFlow({ state }) {
               <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                 <span className="text-xs text-slate-400">
                   {!cvText.trim() && !uploadedFile
-                    ? 'Please upload a CV or paste your text to proceed'
-                    : 'Ready to extract skills'}
+                    ? "Please upload a CV or paste your text to proceed"
+                    : "Ready to extract skills"}
                 </span>
 
                 <button
@@ -445,10 +495,15 @@ export default function AppFlow({ state }) {
           <div className="space-y-6 animate-fade-in pb-20">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-4 gap-3">
               <div>
-                <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider">Step 2 of 5</span>
-                <h2 className="text-2xl font-bold text-slate-900">Your Skills & Live Matching</h2>
+                <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider">
+                  Step 2 of 5
+                </span>
+                <h2 className="text-2xl font-bold text-slate-900">
+                  Your Skills & Live Matching
+                </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Change levels, add or remove skills. Watch opportunity cards re-rank live with animated delta scores.
+                  Change levels, add or remove skills. Watch opportunity cards
+                  re-rank live with animated delta scores.
                 </p>
               </div>
 
@@ -477,7 +532,9 @@ export default function AppFlow({ state }) {
                 className="bg-white border border-indigo-200 rounded-xl p-4 shadow-sm space-y-3 animate-fade-in"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-indigo-900">Add a skill from allowed catalog</span>
+                  <span className="text-xs font-bold text-indigo-900">
+                    Add a skill from allowed catalog
+                  </span>
                   <button
                     type="button"
                     onClick={() => setShowAddForm(false)}
@@ -494,7 +551,9 @@ export default function AppFlow({ state }) {
                     className="text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:bg-white focus:ring-1 focus:ring-indigo-500"
                   >
                     {ALLOWED_SKILLS.map((sk) => (
-                      <option key={sk} value={sk}>{sk}</option>
+                      <option key={sk} value={sk}>
+                        {sk}
+                      </option>
                     ))}
                   </select>
 
@@ -548,7 +607,7 @@ export default function AppFlow({ state }) {
                       <button
                         type="button"
                         onClick={() => {
-                          setSearchTerm('');
+                          setSearchTerm("");
                           setFilterMin60(false);
                           setFilterHideMissingReq(false);
                         }}
@@ -567,11 +626,11 @@ export default function AppFlow({ state }) {
                         isSelected={selectedOppId === opp.id}
                         onSelectWhyFits={() => {
                           setSelectedOppId(opp.id);
-                          setStep(3);
+                          advanceToStep(3);
                         }}
                         onSelectPlan={() => {
                           setSelectedOppId(opp.id);
-                          setStep(4);
+                          advanceToStep(3); // Directs to Step 3 so they review matches before the 7-day plan
                         }}
                       />
                     ))
@@ -583,7 +642,8 @@ export default function AppFlow({ state }) {
               <div className="lg:col-span-4 space-y-3">
                 <div className="flex items-center justify-between text-xs text-slate-500 px-1">
                   <span className="font-bold text-slate-900 uppercase tracking-wider text-[11px]">
-                    Your Skills ({skills.filter(s => !s.removed).length} active)
+                    Your Skills ({skills.filter((s) => !s.removed).length}{" "}
+                    active)
                   </span>
                   <span>Click level to tune</span>
                 </div>
@@ -607,14 +667,17 @@ export default function AppFlow({ state }) {
             <div className="fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 py-3 shadow-md">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between gap-4">
                 <div className="text-xs text-slate-500">
-                  <span className="font-semibold text-slate-700">Nothing is final until you confirm.</span> Adjust any skill freely.
+                  <span className="font-semibold text-slate-700">
+                    Nothing is final until you confirm.
+                  </span>{" "}
+                  Adjust any skill freely.
                 </div>
 
                 <button
                   type="button"
                   onClick={() => {
                     confirmProfile(skills);
-                    setStep(3);
+                    advanceToStep(3);
                   }}
                   className="px-6 py-2.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-colors flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
                 >
@@ -632,10 +695,15 @@ export default function AppFlow({ state }) {
         {step === 3 && (
           <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
             <div className="space-y-1">
-              <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider">Step 3 of 5</span>
-              <h2 className="text-2xl font-bold text-slate-900">Why these matches</h2>
+              <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider">
+                Step 3 of 5
+              </span>
+              <h2 className="text-2xl font-bold text-slate-900">
+                Why these matches
+              </h2>
               <p className="text-xs text-slate-500">
-                Direct evidence audit pairing verbatim quotes from your resume against official opportunity specs.
+                Direct evidence audit pairing verbatim quotes from your resume
+                against official opportunity specs.
               </p>
             </div>
 
@@ -659,7 +727,7 @@ export default function AppFlow({ state }) {
             <div className="flex items-center justify-between pt-4 border-t border-slate-200">
               <button
                 type="button"
-                onClick={() => setStep(2)}
+                onClick={() => advanceToStep(2)}
                 className="text-xs font-semibold text-slate-600 hover:text-slate-900"
               >
                 ← Back to Skills & Fit
@@ -667,10 +735,16 @@ export default function AppFlow({ state }) {
 
               <button
                 type="button"
-                onClick={() => setStep(4)}
+                onClick={() => advanceToStep(4)}
                 className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs px-6 py-2.5 rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
               >
-                <span>Continue to 7-Day Plan for #{rankedOpportunities.findIndex(o => o.id === selectedOppId) + 1} {selectedOpportunity.title}</span>
+                <span>
+                  Continue to 7-Day Plan for #
+                  {rankedOpportunities.findIndex(
+                    (o) => o.id === selectedOppId,
+                  ) + 1}{" "}
+                  {selectedOpportunity.title}
+                </span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -684,24 +758,29 @@ export default function AppFlow({ state }) {
           <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-4 gap-3">
               <div className="space-y-0.5">
-                <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider">Step 4 of 5</span>
-                <h2 className="text-2xl font-bold text-slate-900">7-Day Plan for {selectedOpportunity.title}</h2>
+                <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider">
+                  Step 4 of 5
+                </span>
+                <h2 className="text-2xl font-bold text-slate-900">
+                  7-Day Plan for {selectedOpportunity.title}
+                </h2>
                 <p className="text-xs text-slate-500">
-                  Targeted syllabus to close gaps for {selectedOpportunity.organization}.
+                  Targeted syllabus to close gaps for{" "}
+                  {selectedOpportunity.organization}.
                 </p>
               </div>
 
               {/* Intensity Selector */}
               <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg text-xs">
-                {(['light', 'standard', 'intensive']).map((intensity) => (
+                {["light", "standard", "intensive"].map((intensity) => (
                   <button
                     key={intensity}
                     type="button"
                     onClick={() => setPlanIntensity(intensity)}
                     className={`px-3 py-1 rounded-md capitalize font-medium transition-colors ${
                       planIntensity === intensity
-                        ? 'bg-white text-indigo-700 font-bold shadow-2xs'
-                        : 'text-slate-600 hover:text-slate-900'
+                        ? "bg-white text-indigo-700 font-bold shadow-2xs"
+                        : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
                     {intensity}
@@ -713,9 +792,13 @@ export default function AppFlow({ state }) {
             {/* Day 1 to Day 7 Timeline (Catalog Resources removed) */}
             <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 font-medium">
-                <span className="font-bold text-slate-800 dark:text-slate-100 text-sm">Timeline (Day 1 - Day 7)</span>
+                <span className="font-bold text-slate-800 dark:text-slate-100 text-sm">
+                  Timeline (Day 1 - Day 7)
+                </span>
                 <span className="font-mono tabular-nums text-indigo-700 dark:text-indigo-400 font-semibold">
-                  Total: {activePlan.tasks.reduce((sum, t) => sum + t.minutes, 0)} minutes
+                  Total:{" "}
+                  {activePlan.tasks.reduce((sum, t) => sum + t.minutes, 0)}{" "}
+                  minutes
                 </span>
               </div>
 
@@ -754,7 +837,7 @@ export default function AppFlow({ state }) {
             <div className="pt-2">
               <button
                 type="button"
-                onClick={() => setStep(3)}
+                onClick={() => advanceToStep(3)}
                 className="text-xs font-semibold text-slate-600 hover:text-slate-900"
               >
                 ← Back to Matches
@@ -774,10 +857,15 @@ export default function AppFlow({ state }) {
               </div>
 
               <div className="space-y-1">
-                <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Step 5 of 5 · Complete</span>
-                <h2 className="text-2xl font-bold text-slate-900">Plan Saved!</h2>
+                <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">
+                  Step 5 of 5 · Complete
+                </span>
+                <h2 className="text-2xl font-bold text-slate-900">
+                  Plan Saved!
+                </h2>
                 <p className="text-xs text-slate-500">
-                  Your personalized 7-day study schedule is locked into browser storage.
+                  Your personalized 7-day study schedule is locked into browser
+                  storage.
                 </p>
               </div>
 
@@ -790,7 +878,7 @@ export default function AppFlow({ state }) {
                   {lastSavedPlanId}
                 </div>
                 <div className="text-[11px] text-slate-500">
-                  Saved at {savedPlans[lastSavedPlanId]?.savedAt || 'Just now'}
+                  Saved at {savedPlans[lastSavedPlanId]?.savedAt || "Just now"}
                 </div>
               </div>
 
@@ -798,9 +886,9 @@ export default function AppFlow({ state }) {
                 <button
                   type="button"
                   onClick={() => {
-                    navigate('/plans');
+                    navigate("/plans");
                   }}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs py-3 rounded-lg shadow-xs transition-colors"
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs py-3 rounded-lg shadow-xs transition-colors cursor-pointer"
                 >
                   View plan in /plans
                 </button>
@@ -812,7 +900,7 @@ export default function AppFlow({ state }) {
                     setCopiedId(true);
                     setTimeout(() => setCopiedId(false), 2000);
                   }}
-                  className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5"
+                  className="w-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   {copiedId ? (
                     <>
@@ -826,6 +914,32 @@ export default function AppFlow({ state }) {
                     </>
                   )}
                 </button>
+
+                {/* Return to Home & Start New CV Action Buttons */}
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      resetWorkflow();
+                      navigate("/");
+                    }}
+                    className="py-2.5 px-3 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs rounded-lg border border-slate-200 dark:border-slate-700 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                  >
+                    <Home className="w-3.5 h-3.5" />
+                    <span>Return to Home</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      resetWorkflow();
+                    }}
+                    className="py-2.5 px-3 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-indigo-600 dark:text-indigo-400 font-semibold text-xs rounded-lg border border-slate-200 dark:border-slate-700 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Analyze new CV</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -840,7 +954,7 @@ export default function AppFlow({ state }) {
         plan={activePlan}
         onConfirmSave={() => {
           saveCurrentPlan();
-          setStep(5);
+          advanceToStep(5);
         }}
       />
 
