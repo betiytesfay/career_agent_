@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import ProgressBar from '../components/ProgressBar.jsx';
-import ThemeToggle from '../components/ThemeToggle.jsx';
-import { getPlan } from '../api/client.js';
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import ProgressBar from "../components/ProgressBar.jsx";
+import ThemeToggle from "../components/ThemeToggle.jsx";
+import { getPlan } from "../api/client.js";
 import {
   Sparkles,
   ArrowRight,
@@ -13,21 +13,40 @@ import {
   Clock,
   Printer,
   Copy,
-  Check
-} from 'lucide-react';
+  Check,
+} from "lucide-react";
 
 export default function ReopenPlan({ savedPlans, toggleTaskDone }) {
-  // Change lines 20-22 to:
   const [inputPlanId, setInputPlanId] = useState("");
   const [activePlanId, setActivePlanId] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
   const [copied, setCopied] = useState(false);
   const [fetchedRemotePlan, setFetchedRemotePlan] = useState(null);
 
-  // Loaded plan object (local memory or remote API)
-  const currentPlan =
+  // Auto-select most recently saved plan on first load
+  useEffect(() => {
+    if (!activePlanId && savedPlans && Object.keys(savedPlans).length > 0) {
+      const keys = Object.keys(savedPlans);
+      const latestId = keys[keys.length - 1];
+      setInputPlanId(latestId);
+      setActivePlanId(latestId);
+      setHasSearched(true);
+    }
+  }, [savedPlans]);
+
+  // Normalize plan properties — supports both local (id/title/org) and backend (planId/opportunityTitle/organization) shapes
+  const rawPlan =
     (savedPlans && savedPlans[activePlanId.trim().toUpperCase()]) ||
     fetchedRemotePlan;
+
+  const currentPlan = rawPlan
+    ? {
+        ...rawPlan,
+        id: rawPlan.id || rawPlan.planId,
+        title: rawPlan.title || rawPlan.opportunityTitle,
+        org: rawPlan.org || rawPlan.organization,
+      }
+    : null;
 
   const handleOpen = async (e) => {
     if (e) e.preventDefault();
@@ -229,10 +248,22 @@ export default function ReopenPlan({ savedPlans, toggleTaskDone }) {
                       <input
                         type="checkbox"
                         checked={task.done}
-                        onChange={() =>
-                          toggleTaskDone &&
-                          toggleTaskDone(currentPlan.id, task.day)
-                        }
+                        onChange={() => {
+                          if (toggleTaskDone) {
+                            toggleTaskDone(currentPlan.id, task.day);
+                          }
+                          // Also update local state for remotely fetched plans
+                          if (fetchedRemotePlan) {
+                            setFetchedRemotePlan((prev) => ({
+                              ...prev,
+                              tasks: prev.tasks.map((t) =>
+                                t.day === task.day
+                                  ? { ...t, done: !t.done }
+                                  : t,
+                              ),
+                            }));
+                          }
+                        }}
                         className="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
                       />
                     ) : (
@@ -301,7 +332,6 @@ export default function ReopenPlan({ savedPlans, toggleTaskDone }) {
               </div>
 
               <div className="pt-2 flex justify-center gap-3">
-              
                 <Link
                   to="/app"
                   className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-colors"

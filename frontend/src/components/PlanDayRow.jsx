@@ -6,12 +6,20 @@ export default function PlanDayRow({ task, onUpdateTask }) {
   const [editText, setEditText] = useState(task.title);
   const [editMinutes, setEditMinutes] = useState(task.minutes);
 
+  // Sync edit inputs when intensity changes update task.minutes from parent
+  React.useEffect(() => {
+    if (!isEditing) {
+      setEditText(task.title);
+      setEditMinutes(task.minutes);
+    }
+  }, [task.title, task.minutes, isEditing]);
+
   const handleSave = (e) => {
     e.preventDefault();
     if (onUpdateTask) {
       onUpdateTask(task.day, {
         title: editText.trim() || task.title,
-        minutes: Number(editMinutes) >= 0 ? Number(editMinutes) : task.minutes
+        minutes: Number(editMinutes) >= 0 ? Number(editMinutes) : task.minutes,
       });
     }
     setIsEditing(false);
@@ -25,7 +33,10 @@ export default function PlanDayRow({ task, onUpdateTask }) {
 
   if (isEditing) {
     return (
-      <form onSubmit={handleSave} className="py-3 px-3 bg-indigo-50/50 border border-indigo-200 rounded-lg space-y-2 text-xs">
+      <form
+        onSubmit={handleSave}
+        className="py-3 px-3 bg-indigo-50/50 border border-indigo-200 rounded-lg space-y-2 text-xs"
+      >
         <div className="flex items-center justify-between text-indigo-900 font-bold">
           <span>Edit Day {task.day}</span>
           <div className="flex items-center gap-1">
@@ -57,7 +68,9 @@ export default function PlanDayRow({ task, onUpdateTask }) {
         />
 
         <div className="flex items-center gap-2">
-          <label className="text-[11px] text-slate-600 font-medium">Minutes:</label>
+          <label className="text-[11px] text-slate-600 font-medium">
+            Minutes:
+          </label>
           <input
             type="number"
             min="0"
@@ -75,8 +88,16 @@ export default function PlanDayRow({ task, onUpdateTask }) {
     <div className="py-3.5 flex items-start justify-between gap-3 text-xs group hover:bg-slate-50/60 px-2 rounded-lg transition-colors">
       <div className="space-y-1 flex-1">
         <div className="flex items-center gap-2">
-          <span className="font-mono font-bold text-slate-900">Day {task.day}:</span>
-          <span className={task.isRest ? 'text-slate-400 font-semibold italic' : 'text-slate-800 font-medium'}>
+          <span className="font-mono font-bold text-slate-900">
+            Day {task.day}:
+          </span>
+          <span
+            className={
+              task.isRest
+                ? "text-slate-400 font-semibold italic"
+                : "text-slate-800 font-medium"
+            }
+          >
             {task.title}
           </span>
         </div>

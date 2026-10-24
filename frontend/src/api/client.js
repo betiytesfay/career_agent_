@@ -30,27 +30,33 @@ export function getSessionId() {
  * Universal fetch wrapper with timeout and automatic error recovery
  */
 async function request(endpoint, options = {}) {
+  // Fail immediately when mock mode is enabled so local fallback runs without waiting
+  if (import.meta.env.VITE_USE_MOCK === "true") {
+    throw new Error("VITE_USE_MOCK is enabled; using local simulation.");
+  }
   const url = `${API_BASE_URL}${endpoint}`;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
-  console.log(`[CareerPath API] 🚀 ${options.method || 'GET'} ${url}`);
+  console.log(`[CareerPath API] 🚀 ${options.method || "GET"} ${url}`);
 
   try {
     const res = await fetch(url, {
       ...options,
       signal: controller.signal,
       headers: {
-        'Content-Type': 'application/json',
-        'X-Session-ID': getSessionId(),
-        ...(options.headers || {})
-      }
+        "Content-Type": "application/json",
+        "X-Session-ID": getSessionId(),
+        ...(options.headers || {}),
+      },
     });
     clearTimeout(timeoutId);
 
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.error || `HTTP error ${res.status}: ${res.statusText}`);
+      throw new Error(
+        errData.error || `HTTP error ${res.status}: ${res.statusText}`,
+      );
     }
 
     const data = await res.json();
@@ -58,7 +64,9 @@ async function request(endpoint, options = {}) {
     return data;
   } catch (err) {
     clearTimeout(timeoutId);
-    console.warn(`[CareerPath API] ⚠️ Request to ${url} failed or timed out: ${err.message}`);
+    console.warn(
+      `[CareerPath API] ⚠️ Request to ${url} failed or timed out: ${err.message}`,
+    );
     throw err;
   }
 }

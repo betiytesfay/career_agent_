@@ -96,21 +96,18 @@ export default function AppFlow({ state }) {
   // Confirm Modal state for Step 5
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
-<<<<<<< HEAD
- 
   // If user arrives at /app after a previous plan was already completed, reset to Step 1
   useEffect(() => {
     if (step === 5) {
       resetWorkflow();
     }
   }, []);
-=======
 
   const handleExportPlan = (planDays) => {
     const markdown = [
       '# My Career Plan',
       '',
-      ...planDays.flatMap((day, index) => {
+      ...(planDays || []).flatMap((day, index) => {
         const dayNumber = day.day ?? index + 1;
         const hasTaskList = Array.isArray(day.tasks);
         const heading = hasTaskList && day.title
@@ -136,7 +133,8 @@ export default function AppFlow({ state }) {
     setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
   };
 
->>>>>>> 7f821a0578502cf5279ffd79ec51afca8af85f7e
+
+
   // File upload reader
   const handleFileProcess = (file) => {
     if (!file) return;
@@ -163,29 +161,9 @@ export default function AppFlow({ state }) {
       };
       textReader.readAsText(file);
     } else {
-      textReader.onload = (e) => {
-        const raw = e.target?.result;
-        if (typeof raw === "string") {
-          setCvText(raw);
-        } else if (raw) {
-          const bytes = new Uint8Array(raw);
-          let str = "";
-          for (let i = 0; i < bytes.length; i++) {
-            const b = bytes[i];
-            if ((b >= 32 && b <= 126) || b === 10 || b === 13) {
-              str += String.fromCharCode(b);
-            }
-          }
-          const cleaned = str
-            .replace(/[^\x20-\x7E\n]/g, " ")
-            .replace(/\s{2,}/g, " ")
-            .trim();
-          setCvText(
-            cleaned.length > 20 ? cleaned : `Resume document: ${file.name}`,
-          );
-        }
-      };
-      textReader.readAsArrayBuffer(file);
+      // For PDFs and binary docs, leave cvText empty so extractCv
+      // uses the base64 payload instead of corrupted binary text
+      setCvText("");
     }
   };
 
@@ -449,8 +427,8 @@ export default function AppFlow({ state }) {
 
                     <div>
                       <p className="text-xs font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800/80 rounded-lg py-2 px-3.5 inline-block shadow-2xs">
-                        Note: Since the AI Agent is still in development pasting a
-                        CV text may work better than uploading a CV.
+                        Note: Since the AI Agent is still in development pasting
+                        a CV text may work better than uploading a CV.
                       </p>
                     </div>
                   </div>
@@ -742,20 +720,33 @@ export default function AppFlow({ state }) {
               </p>
             </div>
 
-            {/* Top 3 Opportunities get WhyItFits panel */}
+            {/* Top 3 Opportunities + selected opportunity if outside top 3 */}
             <div className="space-y-6">
-              {rankedOpportunities.slice(0, 3).map((opp, idx) => (
-                <WhyItFits
-                  key={opp.id}
-                  opportunity={opp}
-                  rank={idx + 1}
-                  skills={skills}
-                  onBuildPlan={() => {
-                    setSelectedOppId(opp.id);
-                    setStep(4);
-                  }}
-                />
-              ))}
+              {(() => {
+                const topThree = rankedOpportunities.slice(0, 3);
+                const isSelectedInTopThree = topThree.some(
+                  (o) => o.id === selectedOppId,
+                );
+                const displayList = isSelectedInTopThree
+                  ? topThree
+                  : [...topThree, selectedOpportunity].filter(Boolean);
+                return displayList.map((opp) => {
+                  const rankIdx =
+                    rankedOpportunities.findIndex((o) => o.id === opp.id) + 1;
+                  return (
+                    <WhyItFits
+                      key={opp.id}
+                      opportunity={opp}
+                      rank={rankIdx}
+                      skills={skills}
+                      onBuildPlan={() => {
+                        setSelectedOppId(opp.id);
+                        advanceToStep(4);
+                      }}
+                    />
+                  );
+                });
+              })()}
             </div>
 
             {/* Navigation back and continue */}
@@ -827,31 +818,23 @@ export default function AppFlow({ state }) {
             {/* Day 1 to Day 7 Timeline (Catalog Resources removed) */}
             <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 font-medium">
-<<<<<<< HEAD
                 <span className="font-bold text-slate-800 dark:text-slate-100 text-sm">
                   Timeline (Day 1 - Day 7)
                 </span>
-                <span className="font-mono tabular-nums text-indigo-700 dark:text-indigo-400 font-semibold">
-                  Total:{" "}
-                  {activePlan.tasks.reduce((sum, t) => sum + t.minutes, 0)}{" "}
-                  minutes
-                </span>
-=======
-                <span className="font-bold text-slate-800 dark:text-slate-100 text-sm">Timeline (Day 1 - Day 7)</span>
                 <div className="flex items-center gap-4">
-                  <span className="font-mono tabular-nums text-indigo-700 dark:text-indigo-400 font-semibold">
-                    Total: {activePlan.tasks.reduce((sum, t) => sum + t.minutes, 0)} minutes
-                  </span>
+                  {activePlan?.tasks?.reduce(
+                    (sum, t) => sum + (t.minutes || 0),
+                    0,
+                  ) || 0}
                   <button
                     type="button"
-                    onClick={() => handleExportPlan(activePlan.tasks)}
-                    className="inline-flex items-center gap-1.5 text-indigo-700 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 font-semibold"
+                    onClick={() => handleExportPlan(activePlan?.tasks || [])}
+                    className="inline-flex items-center gap-1.5 text-indigo-700 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 font-semibold cursor-pointer"
                   >
                     <Download className="w-3.5 h-3.5" />
                     Export plan
                   </button>
                 </div>
->>>>>>> 7f821a0578502cf5279ffd79ec51afca8af85f7e
               </div>
 
               <div className="divide-y divide-slate-100 dark:divide-slate-800/80">
@@ -1004,8 +987,8 @@ export default function AppFlow({ state }) {
         onClose={() => setIsConfirmModalOpen(false)}
         opportunity={selectedOpportunity}
         plan={activePlan}
-        onConfirmSave={() => {
-          saveCurrentPlan();
+        onConfirmSave={async () => {
+          await saveCurrentPlan();
           advanceToStep(5);
         }}
       />

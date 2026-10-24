@@ -23,7 +23,7 @@ const STORAGE_KEY_SKILLS = 'careerpath_user_skills_v2';
 export function useDemoState() {
   const [step, setStep] = useState(1);
   const [unlockedStep, setUnlockedStep] = useState(1);
-  
+
   // Reset the workflow to Step 1 for analyzing a new CV
   const resetWorkflow = () => {
     setStep(1);
@@ -120,6 +120,18 @@ export function useDemoState() {
   const rankedOpportunities = useMemo(() => {
     return rankAllOpportunities(skills);
   }, [skills]);
+
+  // Seed baseline scores on first render so first skill change shows delta badges
+  useEffect(() => {
+    if (
+      Object.keys(previousScores.current).length === 0 &&
+      rankedOpportunities.length > 0
+    ) {
+      rankedOpportunities.forEach((opp) => {
+        previousScores.current[opp.id] = opp.score;
+      });
+    }
+  }, [rankedOpportunities]);
 
   // Current selected opportunity with computed fit
   const selectedOpportunity = useMemo(() => {
@@ -262,6 +274,7 @@ export function useDemoState() {
   };
 
   // Chat sender with real/fallback API correction
+  // Chat sender with real/fallback API correction
   const sendChatMessage = async (text) => {
     if (!text.trim()) return;
 
@@ -279,44 +292,57 @@ export function useDemoState() {
     setAiTyping(true);
 
     try {
-      const result = await correctProfile(text, skills);
-      if (result.skills && result.skills.length > 0) {
-        triggerSkillUpdate(result.skills);
-      }
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now() + 1,
-          sender: "ai",
-          text:
-            result.reply ||
-            "I've updated your skills profile according to your notes.",
-          timestamp: new Date().toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-        },
-      ]);
-    } catch {
-      const parsed = parseChatMessage(text, skills, activePlan);
-      if (parsed.action === "lighten_plan") {
-        setPlanIntensity("light");
-      } else if (parsed.updatedSkills && parsed.updatedSkills !== skills) {
-        triggerSkillUpdate(parsed.updatedSkills);
+      const isMockMode = import.meta.env.VITE_USE_MOCK === "true";
+      let backendSuccess = false;
+
+      if (!isMockMode) {
+        try {
+          const result = await correctProfile(text, skills);
+          if (result && result.skills && result.skills.length > 0) {
+            triggerSkillUpdate(result.skills);
+            setChatMessages((prev) => [
+              ...prev,
+              {
+                id: Date.now() + 1,
+                sender: "ai",
+                text:
+                  result.reply ||
+                  "I've updated your skills profile according to your notes.",
+                timestamp: new Date().toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }),
+              },
+            ]);
+            backendSuccess = true;
+          }
+        } catch {
+          backendSuccess = false;
+        }
       }
 
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now() + 1,
-          sender: "ai",
-          text: parsed.reply,
-          timestamp: new Date().toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-        },
-      ]);
+      // Local / Mock fallback handler
+      if (!backendSuccess) {
+        const parsed = parseChatMessage(text, skills, activePlan);
+        if (parsed.action === "lighten_plan") {
+          setPlanIntensity("light");
+        } else if (parsed.updatedSkills && parsed.updatedSkills !== skills) {
+          triggerSkillUpdate(parsed.updatedSkills);
+        }
+
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now() + 1,
+            sender: "ai",
+            text: parsed.reply,
+            timestamp: new Date().toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+          },
+        ]);
+      }
     } finally {
       setAiTyping(false);
     }
@@ -333,6 +359,9 @@ export function useDemoState() {
   // Save current active plan (Endpoint 13: Tool 3)
   const saveCurrentPlan = async () => {
     const fallbackId = `PLAN-${Math.floor(1000 + Math.random() * 9000)}`;
+    // Set ID immediately so Step 5 is never blank while network resolves
+    setLastSavedPlanId(fallbackId);
+
     const newSaved = {
       id: fallbackId,
       opportunityId: selectedOpportunity.id,
@@ -367,28 +396,25 @@ export function useDemoState() {
     }
   };
 
-  // Toggle task in saved plan (Endpoint 15)
-  const toggleSavedPlanTaskDone = async (planId, day) => {
-    let newStatus = false;
-    setSavedPlans((prev) => {
-      const plan = prev[planId];
-      if (!plan) return prev;
-      const target = plan.tasks.find((t) => t.day === day);
-      newStatus = target ? !target.done : true;
-      return {
-        ...prev,
-        [planId]: {
-          ...plan,
-          tasks: plan.tasks.map((t) =>
-            t.day === day ? { ...t, done: newStatus } : t,
-          ),
-        },
-      };
-    });
+  // Toggle a task's done state in a saved plan
+  const toggleSavedPlanTaskDone = (planId, day) => {
+    const plan = savedPlans[planId];
+    if (!plan) return;
+    const task = plan.tasks.find((t) => t.day === day);
+    if (!task) return;
+    const nextDone = !task.done;
 
-    try {
-      await updateActivityStatus(planId, day, newStatus);
-    } catch {}
+    setSavedPlans((prev) => ({
+      ...prev,
+      [planId]: {
+        ...prev[planId],
+        tasks: prev[planId].tasks.map((t) =>
+          t.day === day ? { ...t, done: nextDone } : t,
+        ),
+      },
+    }));
+
+    updateActivityStatus(planId, day, nextDone).catch(() => {});
   };
 
   return {
