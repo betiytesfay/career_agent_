@@ -103,37 +103,49 @@ export default function AppFlow({ state }) {
     }
   }, []);
 
+  // One shared handler: select an opportunity and jump straight to its 7-day plan
+  const buildPlanFor = (oppId) => {
+    setSelectedOppId(oppId);
+    advanceToStep(4);
+  };
+
+  // Cancel the whole process: reset to Step 1 and go back to the home page
+  const handleCancel = () => {
+    resetWorkflow();
+    setChatOpen(false);
+    navigate("/");
+  };
+
   const handleExportPlan = (planDays) => {
     const markdown = [
-      '# My Career Plan',
-      '',
+      "# My Career Plan",
+      "",
       ...(planDays || []).flatMap((day, index) => {
         const dayNumber = day.day ?? index + 1;
         const hasTaskList = Array.isArray(day.tasks);
-        const heading = hasTaskList && day.title
-          ? `## Day ${dayNumber}: ${day.title}`
-          : `## Day ${dayNumber}`;
-        const tasks = hasTaskList ? day.tasks : (day.title ? [day.title] : []);
+        const heading =
+          hasTaskList && day.title
+            ? `## Day ${dayNumber}: ${day.title}`
+            : `## Day ${dayNumber}`;
+        const tasks = hasTaskList ? day.tasks : day.title ? [day.title] : [];
         const taskLines = tasks
-          .map((task) => typeof task === 'string' ? task : task.title)
+          .map((task) => (typeof task === "string" ? task : task.title))
           .filter(Boolean)
           .map((task) => `- ${task}`);
 
-        return [heading, ...taskLines, ''];
-      })
-    ].join('\n');
-    const file = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
+        return [heading, ...taskLines, ""];
+      }),
+    ].join("\n");
+    const file = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
     const downloadUrl = URL.createObjectURL(file);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = downloadUrl;
-    link.download = 'My_Career_Plan.md';
+    link.download = "My_Career_Plan.md";
     document.body.appendChild(link);
     link.click();
     link.remove();
     setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
   };
-
-
 
   // File upload reader
   const handleFileProcess = (file) => {
@@ -258,6 +270,18 @@ export default function AppFlow({ state }) {
             </Link>
 
             {/* Toggle AI Chat Button */}
+
+            {step < 5 && (
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="px-3 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg flex items-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>Cancel</span>
+              </button>
+            )}
+            
             <button
               type="button"
               onClick={() => setChatOpen(!chatOpen)}
@@ -641,10 +665,7 @@ export default function AppFlow({ state }) {
                           setSelectedOppId(opp.id);
                           advanceToStep(3);
                         }}
-                        onSelectPlan={() => {
-                          setSelectedOppId(opp.id);
-                          advanceToStep(3); // Directs to Step 3 so they review matches before the 7-day plan
-                        }}
+                        onSelectPlan={() => buildPlanFor(opp.id)}
                       />
                     ))
                   )}
@@ -739,10 +760,7 @@ export default function AppFlow({ state }) {
                       opportunity={opp}
                       rank={rankIdx}
                       skills={skills}
-                      onBuildPlan={() => {
-                        setSelectedOppId(opp.id);
-                        advanceToStep(4);
-                      }}
+                      onBuildPlan={() => buildPlanFor(opp.id)}
                     />
                   );
                 });

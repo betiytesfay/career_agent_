@@ -30,6 +30,8 @@ export function useDemoState() {
     setUnlockedStep(1);
     setCvText("");
     setUploadedFile(null);
+    setSelectedOppId("OPP-01");
+    setPlanIntensity("standard");
   };
 
   // Unlocks future steps only when the user finishes the current step's action
@@ -417,6 +419,30 @@ export function useDemoState() {
     updateActivityStatus(planId, day, nextDone).catch(() => {});
   };
 
+  // Remove a saved plan (state + local fallback storage)
+    const deleteSavedPlan = (planId) => {
+      const target = String(planId).trim().toUpperCase();
+
+      setSavedPlans((prev) => {
+        const next = {};
+        Object.entries(prev).forEach(([key, p]) => {
+          const pid = String(p?.id || p?.planId || key).toUpperCase();
+          if (key.toUpperCase() !== target && pid !== target) next[key] = p;
+        });
+        return next;
+      });
+
+      try {
+        const stored = JSON.parse(
+          localStorage.getItem("careerpath-saved-plans") || "{}",
+        );
+        Object.keys(stored).forEach((k) => {
+          if (k.toUpperCase() === target) delete stored[k];
+        });
+        localStorage.setItem("careerpath-saved-plans", JSON.stringify(stored));
+      } catch {}
+    };
+
   return {
     step,
     setStep,
@@ -459,6 +485,7 @@ export function useDemoState() {
     lastSavedPlanId,
     saveCurrentPlan,
     toggleSavedPlanTaskDone,
+    deleteSavedPlan,
     chatOpen,
     setChatOpen,
     aiTyping,

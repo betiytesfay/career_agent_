@@ -14,9 +14,14 @@ import {
   Printer,
   Copy,
   Check,
+  Trash2,
 } from "lucide-react";
 
-export default function ReopenPlan({ savedPlans, toggleTaskDone }) {
+export default function ReopenPlan({
+  savedPlans,
+  toggleTaskDone,
+  onDeletePlan,
+}) {
   const [inputPlanId, setInputPlanId] = useState("");
   const [activePlanId, setActivePlanId] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
@@ -67,6 +72,27 @@ export default function ReopenPlan({ savedPlans, toggleTaskDone }) {
     setActivePlanId(id);
     setHasSearched(true);
   };
+
+      const handleDelete = () => {
+        if (!currentPlan) return;
+        if (typeof onDeletePlan !== "function") {
+          console.error("onDeletePlan prop is missing. Check App.jsx.");
+          alert("Delete is not connected. Check App.jsx passes onDeletePlan.");
+          return;
+        }
+        if (
+          !window.confirm(
+            `Remove plan ${currentPlan.id}? This can't be undone.`,
+          )
+        )
+          return;
+
+        onDeletePlan(currentPlan.id);
+        setFetchedRemotePlan(null);
+        setActivePlanId("");
+        setInputPlanId("");
+        setHasSearched(false);
+      };
 
   // Compute tasks done
   const activeTasks = currentPlan
@@ -223,6 +249,14 @@ export default function ReopenPlan({ savedPlans, toggleTaskDone }) {
                       <span>Copy</span>
                     </>
                   )}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="px-3 py-1.5 text-xs font-semibold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-500/15 hover:bg-rose-100 dark:hover:bg-rose-500/25 border border-rose-200 dark:border-rose-500/40 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Remove</span>
                 </button>
               </div>
             </div>

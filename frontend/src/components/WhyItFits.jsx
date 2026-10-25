@@ -26,7 +26,9 @@ export default function WhyItFits({ opportunity, rank, skills = [], onBuildPlan 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 gap-3">
         <div className="space-y-0.5">
           <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-medium">
-            <span className="font-bold text-indigo-600 dark:text-indigo-400">#{rank} Top Match</span>
+            <span className="font-bold text-indigo-600 dark:text-indigo-400">
+              #{rank} Top Match
+            </span>
             <span aria-hidden="true">·</span>
             <span>{opportunity.type}</span>
           </div>
@@ -63,13 +65,22 @@ export default function WhyItFits({ opportunity, rank, skills = [], onBuildPlan 
           <div className="space-y-2">
             {displayQuotes.length > 0 ? (
               displayQuotes.map((item, idx) => (
-                <div key={idx} className="p-3 bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-lg text-xs leading-relaxed space-y-1">
-                  <span className="font-semibold text-indigo-600 dark:text-indigo-400 text-[11px] block">{item.skill}</span>
-                  <p className="text-slate-700 dark:text-slate-300 italic">"{item.evidence}"</p>
+                <div
+                  key={idx}
+                  className="p-3 bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-lg text-xs leading-relaxed space-y-1"
+                >
+                  <span className="font-semibold text-indigo-600 dark:text-indigo-400 text-[11px] block">
+                    {item.skill}
+                  </span>
+                  <p className="text-slate-700 dark:text-slate-300 italic">
+                    "{item.evidence}"
+                  </p>
                 </div>
               ))
             ) : (
-              <p className="text-xs text-slate-400 italic">No specific CV quote recorded for this role.</p>
+              <p className="text-xs text-slate-400 italic">
+                No specific CV quote recorded for this role.
+              </p>
             )}
           </div>
         </div>
@@ -84,7 +95,10 @@ export default function WhyItFits({ opportunity, rank, skills = [], onBuildPlan 
           <div className="space-y-2">
             {opportunity.oppQuotes && opportunity.oppQuotes.length > 0 ? (
               opportunity.oppQuotes.map((quote, idx) => (
-                <div key={idx} className="p-3 bg-white border border-slate-200/60 rounded-lg text-xs leading-relaxed text-slate-700 italic">
+                <div
+                  key={idx}
+                  className="p-3 bg-white border border-slate-200/60 rounded-lg text-xs leading-relaxed text-slate-700 italic"
+                >
                   "{quote}"
                 </div>
               ))
@@ -98,9 +112,9 @@ export default function WhyItFits({ opportunity, rank, skills = [], onBuildPlan 
       </div>
 
       {/* Skills to build section */}
-      <div className="p-4 bg-amber-50/50 border border-amber-200/70 rounded-xl space-y-2">
-        <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900 uppercase tracking-wider">
-          <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+      <div className="p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-300 dark:border-amber-500/40 rounded-xl space-y-2">
+        <div className="flex items-center gap-1.5 text-xs font-bold text-amber-950 dark:text-amber-200 uppercase tracking-wider">
+          <AlertCircle className="w-3.5 h-3.5 text-amber-700 dark:text-amber-300" />
           <span>Skills to Build</span>
         </div>
 
@@ -109,19 +123,21 @@ export default function WhyItFits({ opportunity, rank, skills = [], onBuildPlan 
             {opportunity.missing.map((m) => (
               <span
                 key={m.name}
-                className={`text-xs px-2.5 py-1 rounded-md font-medium border ${
+                className={`text-xs px-2.5 py-1 rounded-md font-semibold border ${
                   m.isRequired
-                    ? 'bg-amber-100/70 text-amber-900 border-amber-300 font-semibold'
-                    : 'bg-white text-slate-700 border-amber-200'
+                    ? "bg-amber-200 text-amber-950 border-amber-500 dark:bg-amber-400 dark:text-amber-950 dark:border-amber-300"
+                    : "bg-white text-slate-900 border-amber-300 dark:bg-slate-800 dark:text-amber-100 dark:border-amber-500/50"
                 }`}
               >
-                {m.name} {m.isRequired ? '(Required for role)' : '(Preferred bonus)'}
+                {m.name}{" "}
+                {m.isRequired ? "(Required for role)" : "(Preferred bonus)"}
               </span>
             ))}
           </div>
         ) : (
-          <p className="text-xs text-emerald-800 font-medium">
-            ✓ You have verified evidence for all required and preferred skills for this position!
+          <p className="text-xs text-emerald-800 dark:text-emerald-300 font-medium">
+            ✓ You have verified evidence for all required and preferred skills
+            for this position!
           </p>
         )}
       </div>

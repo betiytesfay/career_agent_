@@ -21,6 +21,7 @@ export default function App() {
               <ReopenPlan
                 savedPlans={demoState.savedPlans}
                 toggleTaskDone={demoState.toggleSavedPlanTaskDone}
+                onDeletePlan={demoState.deleteSavedPlan}
               />
             }
           />
